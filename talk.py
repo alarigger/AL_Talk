@@ -2,6 +2,7 @@
 import os
 import subprocess
 import json
+import sys, getopt
 
 def generate_detection_file(input_sound_path):
     
@@ -43,18 +44,33 @@ def conform_detection(_file):
             mapped_phoneme = ""
             if mouth_cue["value"] in phonem_map.keys():
                 mapped_phoneme=phonem_map[mouth_cue["value"]]
-            for f in range(start_frame,end_frame-1):
+            for f in range(start_frame,end_frame):
                 frame_dict[str(f)]=mapped_phoneme
         data["conformed"]=frame_dict
         print(data)
     with open(_file, "w") as jsonFile:
         json.dump(data, jsonFile)
 
+def main(argv):
 
-print("HELLO")
-generate_detection_file("D:/1_TRAVAIL/WIP/LIPSING/test_material/Head/audio/son.wav")
+    input_sound_path=""
 
+    try:
+      opts, args = getopt.getopt(argv,"hs:",["input_sound_path="])
+    except getopt.GetoptError:
+      print ('talk.py -s <input_sound_path> ')
+      sys.exit(2)
+    for opt, arg in opts:
+      if opt == '-h':
+         print ('talk.py -s <input_sound_path> ')
+         sys.exit()
+      elif opt in ("-s", "--input_sound_path"):
+         input_sound_path = arg
+    print(input_sound_path) 
+    generate_detection_file(input_sound_path)
 
+if __name__ == "__main__":
+   main(sys.argv[1:])
 '''
-python D:/1_TRAVAIL/WIP/ALARIGGER/CODING/JS/REPOSITORIES/AL_Talk/talk.py
+ python D:/1_TRAVAIL/WIP/ALARIGGER/CODING/JS/REPOSITORIES/AL_Talk/talk.py -s D:/1_TRAVAIL/WIP/LIPSING/test_material/Head/audio/son.wav
 '''
