@@ -17,6 +17,8 @@ function import_lips(){
     }
 
     function get_current_head_angle(_frame){
+        //search inside the selected node's group for a node with a "heady" name and read its current displayed sub name
+        
         var node_path = selection.selectedNode(0)
         split_slash  = node_path.split("/")
         parent_group_path = split_slash[split_slash.length-2]
@@ -31,6 +33,8 @@ function import_lips(){
     }
 
     function extract_angle_from_drawing_path(_path){
+        //the sub name patern should looks like so :   "" HEAD-F_SAD  ""    for the angle to be read. 
+        //Path sample : elements/HEAD/HEAD-F_SAD.tvg
         var split_slash = _path.split("/")
         var last = split_slash[split_slash.length-1]
         var split_six = last.split("-")
