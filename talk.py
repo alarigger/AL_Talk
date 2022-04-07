@@ -16,7 +16,7 @@ def generate_detection_file(input_sound_path):
     args.append("-o "+output_path)
     args.append(input_sound_path)
     args.append("-f json")
-    #args.append("-r phonetic")
+    args.append("-r phonetic")
     args.append("--extendedShapes GHX")
     args.append("-q")
 
@@ -53,24 +53,41 @@ def conform_detection(_file):
 
 def main(argv):
 
-    input_sound_path=""
+    input_sound_path=None
 
     try:
       opts, args = getopt.getopt(argv,"hs:",["input_sound_path="])
     except getopt.GetoptError:
       print ('talk.py -s <input_sound_path> ')
+      print ('input_sound_path can be a file or folder')
+      print ('if folder given , it will be searched for a recent audio file')
       sys.exit(2)
     for opt, arg in opts:
       if opt == '-h':
-         print ('talk.py -s <input_sound_path> ')
-         sys.exit()
+        print ('talk.py -s <input_sound_path> ')
+        print ('input_sound_path can be a file or folder')
+        print ('if folder given , it will be searched for a audio file')
+        sys.exit()
       elif opt in ("-s", "--input_sound_path"):
-         input_sound_path = arg
+        if os.path.exists(arg):
+            input_sound_path = arg
+            #if the given path is a folder we search for an audio file in it
+            if os.path.isdir(input_sound_path):
+                print("folder given")
+                for root, dirs, files in os.walk(input_sound_path):
+                    for file in files:
+                        if file.split(".")[-1] in ['wav','mp3']:
+                            #we stop at the first one , there should be just one file anyway
+                            input_sound_path = root+'/'+file
+                            break
     print(input_sound_path) 
-    generate_detection_file(input_sound_path)
+    if input_sound_path:
+        generate_detection_file(input_sound_path)
+    else:
+        print("incorrect input sound ")
 
 if __name__ == "__main__":
    main(sys.argv[1:])
 '''
- python D:/1_TRAVAIL/WIP/ALARIGGER/CODING/JS/REPOSITORIES/AL_Talk/talk.py -s D:/1_TRAVAIL/WIP/LIPSING/test_material/Head/audio/son.wav
+ python D:/1_TRAVAIL/WIP/ALARIGGER/CODING/JS/REPOSITORIES/AL_Talk/talk.py -s D:/1_TRAVAIL/WIP/LIPSING/test_material/Head/audio
 '''
