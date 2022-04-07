@@ -4,10 +4,10 @@ import subprocess
 import json
 import sys, getopt
 
-def generate_detection_file(input_sound_path):
+def generate_detection_file(input_sound_path,input_dialog_path):
     
+    #formating rhubarb command line 
     RHUBARB = "D:/1_TRAVAIL/LIB/Rhubarb-Lip-Sync-1.12.0-Windows/rhubarb.exe"
-    #-o test.json son.wav -f json -r phonetic --extendedShapes GHX --datUsePrestonBlair--datUsePrestonBlair --datFrameRate 25
     output_path = os.path.dirname(input_sound_path)+"/"+ os.path.basename(input_sound_path).split(".")[0]+"_detec.json"
     print(output_path)
 
@@ -15,12 +15,15 @@ def generate_detection_file(input_sound_path):
     args.append(RHUBARB)
     args.append("-o "+output_path)
     args.append(input_sound_path)
+    #optionnal dialog txt option (the written text said, can improve the detection's quality)
+    if input_dialog_path:
+        args.append("-d "+input_dialog_path)
     args.append("-f json")
-    args.append("-r phonetic")
+    #args.append("-r phonetic")
     args.append("--extendedShapes GHX")
     args.append("-q")
 
-    result = subprocess.run(args)
+    subprocess.run(args)
     if os.path.exists(output_path):
         conform_detection(output_path)
 
@@ -32,6 +35,7 @@ def parse_phonem_map(_path):
             
 def conform_detection(_file):
 
+    #the phonem map is a correspondance table to convert rhubarb phonem (A,B,C,D) to more convinient one (BMP,AI,E,REST)
     phonem_map = parse_phonem_map("D:/1_TRAVAIL/WIP/ALARIGGER/CODING/JS/REPOSITORIES/AL_Talk/phoneme_map.json")
 
     with open(_file, "r") as jsonFile:
@@ -54,9 +58,10 @@ def conform_detection(_file):
 def main(argv):
 
     input_sound_path=None
+    input_dialog_path=None
 
     try:
-      opts, args = getopt.getopt(argv,"hs:",["input_sound_path="])
+      opts, args = getopt.getopt(argv,"hs:d:",["input_sound_path=","input_dialog="])
     except getopt.GetoptError:
       print ('talk.py -s <input_sound_path> ')
       print ('input_sound_path can be a file or folder')
@@ -80,9 +85,12 @@ def main(argv):
                             #we stop at the first one , there should be just one file anyway
                             input_sound_path = root+'/'+file
                             break
+      elif opt in ("-d", "--input_dialog"):
+        if os.path.exists(arg):
+            input_dialog_path = arg
     print(input_sound_path) 
     if input_sound_path:
-        generate_detection_file(input_sound_path)
+        generate_detection_file(input_sound_path,input_dialog_path)
     else:
         print("incorrect input sound ")
 

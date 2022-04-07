@@ -8,6 +8,8 @@
     [EMOTION]_[ANGLE]_[PHONEME] ("JOY_QF_A")
     will also detect angle of the head to call the correct subs . 
 
+    the user can also provide text to improve the detection quality
+
     Alexandre Cormier 
     07/04/0222
 */
@@ -22,7 +24,7 @@ function import_lips(){
 
 	function InputDialog (){
 
-        //we search for a node with a "mouthy" name on the selected node's group
+        //we search for a node with a "mouthy" name inside the selected node's group
         find_and_select_mouth_node()
 
         //simple UI with two inputs "EMOTION" and "EXPOSURE"
@@ -30,41 +32,51 @@ function import_lips(){
 	    d.title = "Import_lips";
 	    d.width = 100;
 
+        //EMOTION : the choosen emotion to find subs with this prefix
 		var EmotionInput = new ComboBox();
-        EmotionInput.label = "EMOTION  : ";
+        EmotionInput.label = "Emotion : ";
         EmotionInput.editable = true;
         EmotionInput.itemList = ["JOY","NEUTRE","SAD"];
 		d.add( EmotionInput );
 
+        //EXPOSURE : how often the sub will be updated we creating lisping animation
 		var ExposureInput = new ComboBox();
-        ExposureInput.label = "EXPOSE AT  : ";
+        ExposureInput.label = "Expose at  : ";
         ExposureInput.editable = true;
         ExposureInput.itemList = [1,2,3,4];
 		d.add( ExposureInput );
 
-
+        //DIALOG : the written text of the sound to improve detection quality
+        var dialogueInput = new LineEdit();
+        dialogueInput.text = get_scene_dialog_file_content()
+        dialogueInput.label = "Dial : ";
+        d.add(dialogueInput);
 		if ( d.exec() ){	
-            apply_lipsing(EmotionInput.currentItem,ExposureInput.currentItem)
+            var args = {
+                "emotion":EmotionInput.currentItem,
+                "exposure":ExposureInput.currentItem,
+                "dialog":dialogueInput.text
+            }
+            apply_lipsing(args)
 		}
 		
 	}
 
 
-    function apply_lipsing(_emotion,_exposure){
+    function apply_lipsing(_args){
 
-        var DETECTION = load_or_generate_detection()
+        var DETECTION = load_or_generate_detection(_args.dialog)
         var PHONEME = "REST"
         var ANGLE = "F"
-
 
         //we apply the phonem from the current frame to the end of the detection dict 
         for (var f = frame.current() ; f <Object.keys(DETECTION).length;f++){
             clear_exposure(f)
-            if (f % _exposure==0){
+            if (f % _args.exposure==0){
                 PHONEME = DETECTION[f]
                 ANGLE = get_current_head_angle(f)
             }
-            var sub_name = [ANGLE,_emotion,PHONEME].join("_")
+            var sub_name = [ANGLE,_args.emotion,PHONEME].join("_")
             MessageLog.trace(sub_name)
             expose_sub(f,sub_name)
         }
@@ -138,28 +150,77 @@ function import_lips(){
         }
     }
 
-    function load_or_generate_detection(){
+    function load_or_generate_detection(_text){
+
         var scene_audio = get_scene_audio_file()
+        
+
         //the detec json is the audio file with -detec :  audio.wav = audio_detect.json
         detect_file_path = scene_audio.split(".wav").join("_detec.json")
         var file = new File( detect_file_path );
-        //if there is no detec file 
-        if(!file.exists){
-            //we generate it with a python code using rhubarb
+
+        var last_dialog = get_scene_dialog_file_content()
+
+        //if there is no detec file  or the dialog has been modified
+        if(!file.exists || last_dialog!=_text ){
+
+            var dialog_path = format_dialog_file_path_from_audio(scene_audio)
+            //we remove and create a new dialog_txt 
+            delete_dialog_file(dialog_path)
+            create_dialog_file(_text,dialog_path)
+
+            //we generate detection with a python code using rhubarb
             var TALK_PYTHON_PATH = "D:/1_TRAVAIL/WIP/ALARIGGER/CODING/JS/REPOSITORIES/AL_Talk/talk.py"
-            args = ["python",TALK_PYTHON_PATH,"-s",scene_audio]
-            args.join(" ")
-            MessageLog.trace(args.join(" "))
-            p1 = new Process2( "python",TALK_PYTHON_PATH,"-s",scene_audio );
+            p1 = new Process2( "python",TALK_PYTHON_PATH,"-s",scene_audio,"-d",dialog_path);
             p1.launch();           
         }
         if(file.exists){
             file.open(1)
             var content = file.read()
+            file.close()
             var data = JSON.parse(content)
             return data["conformed"]
         }
         return "problem while generating detection"
+    }
+
+    function format_dialog_file_path_from_audio(_audio_file){
+        return _audio_file.split(".wav").join("_dialog.txt")
+    }
+
+    function delete_dialog_file(_text,_path){
+        var file = new File(_path);
+        file.remove()
+    }
+
+    function create_dialog_file(_text,_audio_file){
+        var file = new File(_path);
+        file.open(4)
+        var content = file.write(_text)
+        return dialog_file_path
+
+        /*
+        hey merci pour les cadeaux les nullos ha ha
+        */
+    }
+
+    function get_scene_dialog_file_content(){
+        var dir = new Dir;
+        audio_folder_path = scene.currentProjectPathRemapped()+"/audio"
+        dir.path = audio_folder_path
+        files = dir.entryList("*")
+        for (f in files){
+            if(files[f].split(".")[1]=="txt"){
+                var dialog_file_path = audio_folder_path+"/"+files[f]
+                MessageLog.trace("found "+dialog_file_path)
+                var file = new File( dialog_file_path );
+                file.open(1)           
+                var content = file.read()  
+                file.close()   
+                return content
+            }
+        }
+        return ""        
     }
 
     function clear_exposure(_frame){
@@ -192,7 +253,4 @@ function import_lips(){
             }
         }
     }
-
-
-
 }
